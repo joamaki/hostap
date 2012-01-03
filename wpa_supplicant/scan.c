@@ -27,6 +27,9 @@
 #include "bss.h"
 #include "scan.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "ppdp.h"
+#endif
 
 static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 {
@@ -423,6 +426,12 @@ wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_P2P */
 
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_TML_PPDP
+	if (wpabuf_resize(&extra_ie, 100) == 0)
+		ppdp_add_probe_ie(extra_ie);
+
+#endif
 
 	return extra_ie;
 }

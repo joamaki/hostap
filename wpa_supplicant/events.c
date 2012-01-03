@@ -46,6 +46,10 @@
 #include "scan.h"
 #include "offchannel.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "common/ppdp_common.h"
+#include "ppdp.h"
+#endif
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
@@ -670,6 +674,18 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		if (ssid->bssid_set && ssid->ssid_len == 0 &&
 		    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) == 0)
 			check_ssid = 0;
+
+#ifdef CONFIG_TML_PPDP
+                /*if (bss->rssid == NULL)
+                	bss->rssid = ppdp_get_rssid(wpa_s, bss->bssid);*/
+	
+		u8 *rssid = ppdp_get_rssid(wpa_s, bss->bssid);
+                /* Only check ssid if rssid for this bss is not set. */
+                if (rssid) {
+                	wpa_printf(MSG_DEBUG, "   rssid_set! ");
+			check_ssid = 0;
+                }
+#endif
 
 		if (check_ssid &&
 		    (ssid_len != ssid->ssid_len ||

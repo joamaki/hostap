@@ -34,6 +34,9 @@
 #include "ap_drv_ops.h"
 #include "beacon.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "ppdp.h"
+#endif
 
 #ifdef NEED_AP_MLME
 
@@ -189,7 +192,9 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len)
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 				   struct sta_info *sta,
 				   const struct ieee80211_mgmt *req,
-				   int is_p2p, size_t *resp_len)
+				   size_t req_len,
+				   int is_p2p, size_t *resp_len,
+				   char *ssid, size_t ssid_len)
 {
 	struct ieee80211_mgmt *resp;
 	u8 *pos, *epos;
@@ -227,9 +232,14 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	pos = resp->u.probe_resp.variable;
 	*pos++ = WLAN_EID_SSID;
-	*pos++ = hapd->conf->ssid.ssid_len;
+
+/*	*pos++ = hapd->conf->ssid.ssid_len;
 	os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
-	pos += hapd->conf->ssid.ssid_len;
+	pos += hapd->conf->ssid.ssid_len; */
+
+	*pos++ = ssid_len; 
+	os_memcpy(pos, ssid, ssid_len); 
+	pos += ssid_len; 
 
 	/* Supported rates */
 	pos = hostapd_eid_supp_rates(hapd, pos);
@@ -287,6 +297,12 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 		pos = hostapd_eid_p2p_manage(hapd, pos);
 #endif /* CONFIG_P2P_MANAGER */
 
+
+#ifdef CONFIG_TML_PPDP
+        printf("PPDP: eid probe resp\n");
+        pos = ppdp_eid_probe_resp(hapd, req, req_len, pos, epos);
+#endif
+
 	*resp_len = pos - (u8 *) resp;
 	return (u8 *) resp;
 }
@@ -302,6 +318,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 	struct sta_info *sta = NULL;
 	size_t i, resp_len;
 	int noack;
+	char *ssid = hapd->conf->ssid.ssid;
+       	size_t ssid_len = hapd->conf->ssid.ssid_len;
 
 	ie = mgmt->u.probe_req.variable;
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
@@ -345,6 +363,12 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_TML_PPDP
+       if (elems.ssid_len == 0 && ppdp_is_probe_req(ie, len))
+               goto ppdp_skip_ssid;
+#endif
+
+
 	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0) {
 		wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR " for "
 			   "broadcast SSID ignored", MAC2STR(mgmt->sa));
@@ -362,6 +386,21 @@ void handle_probe_req(struct hostapd_data *hapd,
 		elems.ssid_len = 0;
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_TML_PPDP
+       //printf("ssid_len: %d\n", elems.ssid_len);
+       //printf("ssid: '%s'\n", elems.ssid);
+
+       if (elems.ssid_len == PPDP_RSSID_LEN &&
+            os_memcmp(elems.ssid, hapd->conf->ssid.rssid, elems.ssid_len) ==
+            0) {
+               printf("ssid is a match!\n");
+               ssid = hapd->conf->ssid.rssid;
+               ssid_len = PPDP_RSSID_LEN;
+               if (sta)
+                       sta->ssid_probe = &hapd->conf->ssid;
+       } else
+#endif
 
 	if (elems.ssid_len == 0 ||
 	    (elems.ssid_len == hapd->conf->ssid.ssid_len &&
@@ -412,11 +451,15 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_INTERWORKING */
 
+#ifdef CONFIG_TML_PPDP
+ppdp_skip_ssid:
+#endif
+
 	/* TODO: verify that supp_rates contains at least one matching rate
 	 * with AP configuration */
 
-	resp = hostapd_gen_probe_resp(hapd, sta, mgmt, elems.p2p != NULL,
-				      &resp_len);
+	resp = hostapd_gen_probe_resp(hapd, sta, mgmt, len, elems.p2p != NULL,
+				      &resp_len, ssid, ssid_len);
 	if (resp == NULL)
 		return;
 
@@ -469,7 +512,8 @@ static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
 			   "this");
 
 	/* Generate a Probe Response template for the non-P2P case */
-	return hostapd_gen_probe_resp(hapd, NULL, NULL, 0, resp_len);
+	return hostapd_gen_probe_resp(hapd, NULL, NULL, 0, 0, resp_len,
+				      hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
 }
 
 #endif /* NEED_AP_MLME */

@@ -29,6 +29,10 @@
 #include "sme.h"
 #include "notify.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "ppdp.h"
+#endif
+
 int wpas_notify_supplicant_initialized(struct wpa_global *global)
 {
 #ifdef CONFIG_DBUS
@@ -172,6 +176,10 @@ void wpas_notify_scan_results(struct wpa_supplicant *wpa_s)
 	wpa_supplicant_dbus_notify_scan_results(wpa_s);
 
 	wpas_wps_notify_scan_results(wpa_s);
+
+#ifdef CONFIG_TML_PPDP
+	ppdp_notify_scan_results(wpa_s);
+#endif
 }
 
 

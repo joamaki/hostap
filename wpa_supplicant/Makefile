@@ -68,6 +68,12 @@ OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 OBJS_c += ../src/utils/wpa_debug.o
 OBJS_c += ../src/utils/common.o
 
+ifdef CONFIG_TML_PPDP
+OBJS += ppdp.o ../src/common/ppdp_common.o
+CFLAGS += -DCONFIG_TML_PPDP
+endif
+
+
 ifndef CONFIG_OS
 ifdef CONFIG_NATIVE_WINDOWS
 CONFIG_OS=win32

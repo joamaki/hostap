@@ -54,6 +54,11 @@ OBJS += ../src/ap/pmksa_cache_auth.o
 OBJS += ../src/ap/ieee802_11_shared.o
 OBJS += ../src/ap/beacon.o
 
+ifdef CONFIG_TML_PPDP
+CFLAGS += -DCONFIG_TML_PPDP
+OBJS += ../src/ap/ppdp.o ../src/common/ppdp_common.o
+endif
+
 OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
 
 NEED_RC4=y

@@ -1760,6 +1760,9 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 #ifdef IEEE8021X_EAPOL
 	eap_peer_config_free(&ssid->eap);
 #endif /* IEEE8021X_EAPOL */
+#ifdef CONFIG_TML_PPDP
+        os_free(ssid->rssid);
+#endif /* CONFIG_TMP_PPDP */
 	os_free(ssid->id_str);
 	os_free(ssid->scan_freq);
 	os_free(ssid->freq_list);

@@ -104,6 +104,14 @@ struct wpa_ssid {
 	 */
 	size_t ssid_len;
 
+#ifdef CONFIG_TML_PPDP
+        /**
+         * rssid - Current selected RSSID
+         */
+        u8 *rssid;
+#endif
+
+
 	/**
 	 * bssid - BSSID
 	 *

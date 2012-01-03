@@ -521,6 +521,11 @@ struct wpa_supplicant {
 	} hw;
 
 	int pno;
+
+#ifdef CONFIG_TML_PPDP
+       struct ppdp_rssid_list *ppdp_rssid_list;
+#endif
+
 };
 
 

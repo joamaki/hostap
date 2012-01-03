@@ -20,6 +20,10 @@
 #include "common/wpa_common.h"
 #include "wps/wps.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "common/ppdp_common.h"
+#endif
+
 #define MAX_STA_COUNT 2007
 #define MAX_VLAN_ID 4094
 
@@ -57,6 +61,11 @@ struct hostapd_ssid {
 	char ssid[HOSTAPD_MAX_SSID_LEN + 1];
 	size_t ssid_len;
 	int ssid_set;
+
+#ifdef CONFIG_TML_PPDP
+        char rssid[PPDP_RSSID_LEN + 1];
+        int rssid_set;
+#endif
 
 	char vlan[IFNAMSIZ + 1];
 	secpolicy security_policy;

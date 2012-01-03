@@ -52,6 +52,12 @@
 #include "scan.h"
 #include "offchannel.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "common/ppdp_common.h"
+#include "ppdp.h"
+#endif
+
+
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
 "Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi> and contributors";
@@ -1356,6 +1362,36 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	if (bss) {
 		params.ssid = bss->ssid;
 		params.ssid_len = bss->ssid_len;
+
+#ifdef CONFIG_TML_PPDP
+		u8 *rssid = ppdp_get_rssid(wpa_s, bss->bssid);
+                if (rssid) {
+                       params.ssid = rssid;
+                       params.ssid_len = PPDP_RSSID_LEN;
+
+		       ssid->rssid = rssid;
+
+                       /*if (ssid->rssid) {
+                               if(os_memcmp(ssid->rssid, rssid,
+                                            PPDP_RSSID_LEN) != 0) {
+                                       os_free(ssid->rssid);
+                                       ssid->rssid = os_zalloc(PPDP_RSSID_LEN+1);
+                               }
+                       } else {
+                               ssid->rssid = os_zalloc(PPDP_RSSID_LEN+1);
+                       }
+                       if (ssid->rssid != NULL) {
+                               os_memcpy(ssid->rssid, rssid, PPDP_RSSID_LEN);
+                       }*/
+
+                       printf("associate - rssid: '%s'\n", ssid->rssid);
+               }
+
+               /* Launch a probe so the kernel gets the RSSID */
+               //wpa_drv_scan(wpa_s, bss->rssid, PPDP_RSSID_LEN);
+#endif
+
+
 		if (!wpas_driver_bss_selection(wpa_s)) {
 			params.bssid = bss->bssid;
 			params.freq = bss->freq;
@@ -1855,7 +1891,12 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 	while (entry) {
 		if (!entry->disabled &&
 		    ((ssid_len == entry->ssid_len &&
-		      os_memcmp(ssid, entry->ssid, ssid_len) == 0) || wired) &&
+		      os_memcmp(ssid, entry->ssid, ssid_len) == 0) || 
+#ifdef CONFIG_TML_PPDP
+                    (entry->rssid && ssid_len == PPDP_RSSID_LEN &&
+                     os_memcmp(ssid, entry->rssid, ssid_len) == 0) ||
+#endif
+		    wired) &&
 		    (!entry->bssid_set ||
 		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
 			return entry;

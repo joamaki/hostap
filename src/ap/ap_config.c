@@ -25,6 +25,9 @@
 #include "sta_info.h"
 #include "ap_config.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "ppdp.h"
+#endif
 
 static void hostapd_config_free_vlan(struct hostapd_bss_config *bss)
 {
@@ -93,6 +96,11 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 #ifdef CONFIG_IEEE80211R
 	bss->ft_over_ds = 1;
 #endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_TML_PPDP
+        ppdp_generate_rssid(bss->ssid.rssid);
+#endif
+
 }
 
 

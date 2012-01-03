@@ -42,6 +42,10 @@
 #include "ap_drv_ops.h"
 #include "ieee802_11.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "common/ppdp_common.h"
+#include "ppdp.h"
+#endif
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
 {
@@ -531,6 +535,13 @@ static u16 check_ssid(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	if (ssid_ie == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+
+#ifdef CONFIG_TML_PPDP
+        if (ssid_ie_len == PPDP_RSSID_LEN &&
+           !os_memcmp(ssid_ie, hapd->conf->ssid.rssid, ssid_ie_len))
+               printf("PPDP: RSSID matched for STA " MACSTR "\n", MAC2STR(sta->addr));
+        else
+#endif
 
 	if (ssid_ie_len != hapd->conf->ssid.ssid_len ||
 	    os_memcmp(ssid_ie, hapd->conf->ssid.ssid, ssid_ie_len) != 0) {
