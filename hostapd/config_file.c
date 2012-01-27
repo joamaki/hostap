@@ -27,6 +27,8 @@
 #include "ap/ap_config.h"
 #include "config_file.h"
 
+#include "ap/ppdp.h"
+
 
 extern struct wpa_driver_ops *wpa_drivers[];
 

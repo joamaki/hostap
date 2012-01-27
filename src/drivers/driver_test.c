@@ -585,6 +585,7 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 		pos += wpa_snprintf_hex(pos, end - pos, bss->wps_probe_resp_ie,
 					bss->wps_probe_resp_ie_len);
 
+
 		if (bss->privacy) {
 			ret = snprintf(pos, end - pos, " PRIVACY");
 			if (ret < 0 || ret >= end - pos)

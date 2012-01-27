@@ -23,7 +23,7 @@ struct ppdp_rssid_list {
 
 u8 * ppdp_get_rssid (struct wpa_supplicant *wpa_s, u8 *bssid);
 
-void ppdp_add_probe_ie(struct wpabuf *buf);
+struct wpabuf *ppdp_build_probe_ie(void);
 
 void ppdp_notify_scan_results(struct wpa_supplicant *wpa_s);
 

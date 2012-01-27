@@ -428,9 +428,10 @@ wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WPS */
 
 #ifdef CONFIG_TML_PPDP
-	if (wpabuf_resize(&extra_ie, 100) == 0)
-		ppdp_add_probe_ie(extra_ie);
-
+	struct wpabuf *ppdp_ie = ppdp_build_probe_ie();
+	if (wpabuf_resize(&extra_ie, wpabuf_len(ppdp_ie)) == 0)
+		wpabuf_put_buf(extra_ie, ppdp_ie);
+	wpabuf_free(ppdp_ie);
 #endif
 
 	return extra_ie;

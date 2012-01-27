@@ -22,7 +22,7 @@
 #include "wpa_common.h"
 #include "ppdp_common.h"
 
-const u8 ppdp_oui[] = { 0xAA, 0xBB, 0xCC };
+const u8 ppdp_oui[] = { 0xAA, 0xBB, 0xCC, 0x00 };
 
 static const char bin2hex_tbl[] = {'0', '1', '2', '3', '4',
 				    '5', '6', '7', '8', '9',

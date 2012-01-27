@@ -299,7 +299,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 
 #ifdef CONFIG_TML_PPDP
-        printf("PPDP: eid probe resp\n");
+        wpa_printf(MSG_DEBUG, "PPDP: eid probe resp");
         pos = ppdp_eid_probe_resp(hapd, req, req_len, pos, epos);
 #endif
 
@@ -320,6 +320,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 	int noack;
 	char *ssid = hapd->conf->ssid.ssid;
        	size_t ssid_len = hapd->conf->ssid.ssid_len;
+
+
+	wpa_printf(MSG_DEBUG, "PPDP: handle probe req");
 
 	ie = mgmt->u.probe_req.variable;
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
@@ -364,6 +367,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_TML_PPDP
+
        if (elems.ssid_len == 0 && ppdp_is_probe_req(ie, len))
                goto ppdp_skip_ssid;
 #endif
@@ -388,8 +392,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_TML_PPDP
-       //printf("ssid_len: %d\n", elems.ssid_len);
-       //printf("ssid: '%s'\n", elems.ssid);
+       printf("ssid_len: %d\n", elems.ssid_len);
+       printf("ssid: '%s'\n", elems.ssid);
 
        if (elems.ssid_len == PPDP_RSSID_LEN &&
             os_memcmp(elems.ssid, hapd->conf->ssid.rssid, elems.ssid_len) ==
@@ -510,6 +514,14 @@ static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
 		wpa_printf(MSG_WARNING, "Device is trying to offload "
 			   "Interworking Probe Response while not supporting "
 			   "this");
+
+#ifdef CONFIG_TML_PPDP
+	if (hapd->iface->probe_resp_offloads != 0) {
+		wpa_printf(MSG_WARNING, "Device is tryping to offload PPDP"
+			   " but this is not supported!");
+	}
+#endif
+	
 
 	/* Generate a Probe Response template for the non-P2P case */
 	return hostapd_gen_probe_resp(hapd, NULL, NULL, 0, 0, resp_len,

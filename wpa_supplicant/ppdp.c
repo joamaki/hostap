@@ -41,12 +41,17 @@ static int ppdp_authenticate(const u8 *psk,
 
 	ppdp_derive_keys(psk, sta_nonce, ap_nonce, authkey, enckey);
 
+	ppdp_dump(psk, sta_nonce, ap_nonce, erssid, msgauth, authkey, enckey);
+
 	ppdp_calculate_msgauth(authkey, sta_nonce, ap_nonce, erssid, msgauth2);
 
 	if (os_memcmp(msgauth, msgauth2, PPDP_MSGAUTH_LEN) == 0) {
 		ppdp_decrypt_ssid(enckey, erssid, rssid_out);
+		printf("PPDP: authentication ok, ssid: %s\n", rssid_out);
 		return 0;
 	}
+
+	printf("PPDP: authentication failed");
 	return -1;
 }
 
@@ -95,16 +100,18 @@ static void ppdp_put_rssid (struct wpa_supplicant *wpa_s, const u8 *bssid, const
 	wpa_s->ppdp_rssid_list = r;
 }
 
-void ppdp_add_probe_ie(struct wpabuf *buf)
+struct wpabuf *ppdp_build_probe_ie(void)
 {
-      wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
-      wpabuf_put_u8(buf, PPDP_PROBE_REQ_LEN);
-      wpabuf_put_be24(buf, PPDP_OUI);
-      wpabuf_put_u8(buf, 0);
+	struct wpabuf *buf = wpabuf_alloc(100);
+	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(buf, 4 + PPDP_NONCE_LEN);
 
-      u8 nonce[PPDP_NONCE_LEN];
-      os_get_random(nonce, PPDP_NONCE_LEN);
-      wpabuf_put_data(buf, nonce, PPDP_NONCE_LEN);
+	wpabuf_put_be32(buf, PPDP_OUI);
+	
+	u8 nonce[PPDP_NONCE_LEN];
+	os_get_random(nonce, PPDP_NONCE_LEN);
+	wpabuf_put_data(buf, nonce, PPDP_NONCE_LEN);
+	return buf;
 }
 
 
@@ -143,16 +150,19 @@ void ppdp_handle_response(struct wpa_supplicant *wpa_s,
 
 static void ppdp_process_bss(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	struct wpabuf *buf = wpa_bss_get_vendor_ie_multi(bss, PPDP_OUI);
-	const u8 *pos = wpabuf_head(buf);
-	size_t expected = 2*PPDP_NONCE_LEN + PPDP_RSSID_LEN + PPDP_MSGAUTH_LEN;
+	const u8 *pos = wpa_bss_get_vendor_ie(bss, PPDP_OUI);
+	if (pos == NULL) return;
 
-	if (wpabuf_len(buf) != expected) {
-		wpa_printf(MSG_DEBUG, "PPDP: Invalid message (length %lu, expected %lu)",
-			wpabuf_len(buf), expected);
-		wpabuf_free(buf);
-		return;
-	}
+	const int len = pos[1];
+	size_t expected = PPDP_OUI_LEN + 2*PPDP_NONCE_LEN + PPDP_RSSID_LEN + PPDP_MSGAUTH_LEN;
+ 
+	if (len != expected) {
+ 		wpa_printf(MSG_DEBUG, "PPDP: Invalid message (length %lu, expected %lu)",
+			len, expected);
+ 		return;
+ 	}
+
+	pos += 2 + 4; // skip
 
  	const u8 *sta_nonce = pos;
 	pos += PPDP_NONCE_LEN;
@@ -166,7 +176,7 @@ static void ppdp_process_bss(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	const u8 *msgauth = pos;
 	pos += PPDP_MSGAUTH_LEN;
 
-	wpabuf_free(buf);
+	//wpabuf_free(buf);
 
 	ppdp_handle_response(wpa_s, bss->bssid, sta_nonce, ap_nonce, erssid, msgauth);
 }

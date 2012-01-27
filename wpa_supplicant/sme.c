@@ -33,6 +33,8 @@
 #include "scan.h"
 #include "sme.h"
 
+#include "ppdp.h"
+
 #define SME_AUTH_TIMEOUT 5
 #define SME_ASSOC_TIMEOUT 5
 
@@ -71,6 +73,16 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	params.bssid = bss->bssid;
 	params.ssid = bss->ssid;
 	params.ssid_len = bss->ssid_len;
+
+#ifdef CONFIG_TML_PPDP
+	u8 *rssid = ppdp_get_rssid(wpa_s, bss->bssid);
+        if (rssid) {
+        	params.ssid = rssid;
+        	params.ssid_len = PPDP_RSSID_LEN;
+		ssid->rssid = rssid;
+	}
+#endif
+
 	params.p2p = ssid->p2p_group;
 
 	if (wpa_s->sme.ssid_len != params.ssid_len ||

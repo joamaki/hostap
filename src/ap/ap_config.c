@@ -27,6 +27,7 @@
 
 #ifdef CONFIG_TML_PPDP
 #include "ppdp.h"
+#include "common/ppdp_common.h"
 #endif
 
 static void hostapd_config_free_vlan(struct hostapd_bss_config *bss)
@@ -96,10 +97,6 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 #ifdef CONFIG_IEEE80211R
 	bss->ft_over_ds = 1;
 #endif /* CONFIG_IEEE80211R */
-
-#ifdef CONFIG_TML_PPDP
-        ppdp_generate_rssid(bss->ssid.rssid);
-#endif
 
 }
 
@@ -319,6 +316,17 @@ int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf)
 						&conf->ssid))
 			return -1;
 	}
+
+#ifdef CONFIG_TML_PPDP
+	// TODO: HackHack. 
+	// Rather than overriding ssid here we should change the ssid to rssid
+	// in beacon / probe response generation
+	ppdp_generate_rssid(ssid->rssid);
+	os_memcpy(ssid->ssid, ssid->rssid, PPDP_RSSID_LEN);
+	ssid->ssid_len = PPDP_RSSID_LEN;
+#endif
+
+
 
 	return 0;
 }

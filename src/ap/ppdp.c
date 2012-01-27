@@ -38,6 +38,8 @@ Boolean ppdp_is_probe_req(const u8 *start,
 	size_t left = len;
 	const u8 *pos = start;
 
+	printf("ppdp_is_probe_req\n");
+
 	while (left >= 2) {
 		u8 id, elen;
 		id = *pos++;
@@ -49,7 +51,8 @@ Boolean ppdp_is_probe_req(const u8 *start,
 
 		if (id == WLAN_EID_VENDOR_SPECIFIC &&
 		    elen == PPDP_PROBE_REQ_LEN &&
-		    !os_memcmp(pos, ppdp_oui, 3)) {
+		    !os_memcmp(pos, ppdp_oui, 4)) {
+			printf("PPDP: is probe req.\n");
 			return TRUE;
 		}
 		left -= elen;
@@ -82,7 +85,7 @@ static ParseRes ppdp_parse_probe_req(const u8 *start,
 			printf("vendor specific eid with oui: %02x:%02x:%02x\n",
 			*tpos, *(tpos+1), *(tpos+2));
 
-			if (!os_memcmp(tpos, ppdp_oui, 3)) {
+			if (!os_memcmp(tpos, ppdp_oui, 4)) {
 				printf("it's ours!\n");
 				printf("eid: %x\n", *(tpos+3));
 				}
@@ -90,8 +93,8 @@ static ParseRes ppdp_parse_probe_req(const u8 *start,
 
 		if (id == WLAN_EID_VENDOR_SPECIFIC &&
 		    elen == PPDP_PROBE_REQ_LEN &&
-		    !os_memcmp(tpos, ppdp_oui, 3)) {
-			tpos += 3;
+		    !os_memcmp(tpos, ppdp_oui, 4)) {
+			tpos += 4;
 			os_memcpy(sta_nonce_out, tpos, PPDP_NONCE_LEN);
 			printf("Parse OK!\n");
 			return ParseOK;
@@ -145,8 +148,8 @@ u8 * ppdp_eid_probe_resp(struct hostapd_data *hapd,
 	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
 	*pos++ = PPDP_PROBE_RESP_LEN;
 
-	os_memcpy(pos, ppdp_oui, 3);
-	pos += 3;
+	os_memcpy(pos, ppdp_oui, 4);
+	pos += 4;
 
 	os_memcpy(pos, sta_nonce, 16);
 	pos += 16;
