@@ -300,7 +300,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 #ifdef CONFIG_TML_PPDP
         wpa_printf(MSG_DEBUG, "PPDP: eid probe resp");
-        pos = ppdp_eid_probe_resp(hapd, req, req_len, pos, epos);
+        pos = ppdp_eid_probe_resp(hapd, sta, req, req_len, pos, epos);
 #endif
 
 	*resp_len = pos - (u8 *) resp;
@@ -367,17 +367,20 @@ void handle_probe_req(struct hostapd_data *hapd,
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_TML_PPDP
-
-       if (elems.ssid_len == 0 && ppdp_is_probe_req(ie, len))
-               goto ppdp_skip_ssid;
+	if (ppdp_is_probe_req(ie, len)) {
+		goto ignore_broadcast_skip;
+	}
 #endif
-
 
 	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0) {
 		wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR " for "
 			   "broadcast SSID ignored", MAC2STR(mgmt->sa));
 		return;
 	}
+
+#ifdef CONFIG_TML_PPDP
+ignore_broadcast_skip:
+#endif
 
 	sta = ap_get_sta(hapd, mgmt->sa);
 
@@ -395,15 +398,14 @@ void handle_probe_req(struct hostapd_data *hapd,
        printf("ssid_len: %d\n", elems.ssid_len);
        printf("ssid: '%s'\n", elems.ssid);
 
-       if (elems.ssid_len == PPDP_RSSID_LEN &&
-            os_memcmp(elems.ssid, hapd->conf->ssid.rssid, elems.ssid_len) ==
-            0) {
-               printf("ssid is a match!\n");
-               ssid = hapd->conf->ssid.rssid;
-               ssid_len = PPDP_RSSID_LEN;
-               if (sta)
-                       sta->ssid_probe = &hapd->conf->ssid;
-       } else
+       if (ppdp_is_probe_req(ie, len)) {
+	       ssid_len = PPDP_RSSID_LEN;
+	       if (sta) {
+		       ssid = sta->rssid;
+	       } else {
+		       ssid = ppdp_get_rssid(mgmt->sa);
+	       }
+       }
 #endif
 
 	if (elems.ssid_len == 0 ||
@@ -454,10 +456,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 		}
 	}
 #endif /* CONFIG_INTERWORKING */
-
-#ifdef CONFIG_TML_PPDP
-ppdp_skip_ssid:
-#endif
 
 	/* TODO: verify that supp_rates contains at least one matching rate
 	 * with AP configuration */

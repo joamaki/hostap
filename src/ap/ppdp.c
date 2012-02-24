@@ -17,19 +17,67 @@
 #include "crypto/sha1.h"
 #include "crypto/aes.h"
 #include "ap_config.h"
+#include "sta_info.h"
 
 #include "common/ppdp_common.h"
 #include "ppdp.h"
 
-void ppdp_generate_rssid(char rssid_out[])
+struct rssid_cache_entry {
+	u8 sta[ETH_ALEN];
+	char rssid[PPDP_RSSID_LEN];
+};
+
+/* N.B. that if there are more than RSSID_CACHE_SIZE new stations
+ * associating at the same time some of the stations
+ * might receive a probe response with the wrong rssid if the
+ * rssid already got reallocated.
+ */
+
+// TODO: Larger cache with hashing + timestamps
+// Resolve collisions with open addressing and
+// overwriting of expired entries?
+
+#define RSSID_CACHE_SIZE 32
+static int rssid_cache_latest;
+static struct rssid_cache_entry rssid_cache[RSSID_CACHE_SIZE];
+
+static char* rssid_cache_get(const u8 *sta) {
+	int i;
+	for (i = 0; i < RSSID_CACHE_SIZE; i++) {
+		struct rssid_cache_entry *e = &rssid_cache[i];
+		if (os_memcmp(sta, e->sta, ETH_ALEN) == 0)
+			return e->rssid;
+	}
+	return NULL;
+}
+
+static char* rssid_cache_put(const u8 *sta, char *rssid) {
+	struct rssid_cache_entry e;
+	os_memcpy(e.sta, sta, sizeof(e.sta));
+	os_memcpy(e.rssid, rssid, sizeof(e.rssid));
+
+	rssid_cache[rssid_cache_latest] = e;
+	rssid = rssid_cache[rssid_cache_latest].rssid;
+	rssid_cache_latest = (rssid_cache_latest+1)%RSSID_CACHE_SIZE;
+	return rssid;
+}
+
+char* ppdp_get_rssid(const u8 *sta)
 {
-	u8 rnd[PPDP_RSSID_LEN/2];
-	os_get_random(rnd, PPDP_RSSID_LEN/2);
-	os_snprintf(rssid_out, PPDP_RSSID_LEN+1,
-		    "%02x%02x%02x%02x%02x%02x%02x%02x",
-		    rnd[0], rnd[1], rnd[2], rnd[3],
-		    rnd[4], rnd[5], rnd[6], rnd[7]);
-	printf("rssid: %s\n", rssid_out);
+	char *rssid = NULL;
+
+	rssid = rssid_cache_get(sta);
+	if (!rssid) {
+		char rssid_tmp[PPDP_RSSID_LEN+1];
+		u8 rnd[PPDP_RSSID_LEN/2];
+		os_get_random(rnd, PPDP_RSSID_LEN/2);
+		os_snprintf(rssid_tmp, PPDP_RSSID_LEN+1,
+			    "%02x%02x%02x%02x%02x%02x%02x%02x",
+			    rnd[0], rnd[1], rnd[2], rnd[3],
+			    rnd[4], rnd[5], rnd[6], rnd[7]);
+		rssid = rssid_cache_put(sta, rssid_tmp);
+	}
+	return rssid;
 }
 
 Boolean ppdp_is_probe_req(const u8 *start,
@@ -107,6 +155,7 @@ static ParseRes ppdp_parse_probe_req(const u8 *start,
 }
 
 u8 * ppdp_eid_probe_resp(struct hostapd_data *hapd,
+			 struct sta_info *sta,
 			 const struct ieee80211_mgmt *mgmt,
 			 size_t len,
 			 u8 *pos, u8 *epos)
@@ -121,6 +170,15 @@ u8 * ppdp_eid_probe_resp(struct hostapd_data *hapd,
 	u8 msgauth[PPDP_MSGAUTH_LEN];
 
 	const u8 *ies = mgmt->u.probe_req.variable;
+
+	char *rssid = NULL;
+	
+	if (sta) {
+		rssid = sta->rssid;
+	} else {
+		rssid = ppdp_get_rssid(mgmt->sa);
+	}
+
 
 	printf("in ppdp_eid_probe_resp\n");
 
@@ -141,7 +199,7 @@ u8 * ppdp_eid_probe_resp(struct hostapd_data *hapd,
 
 	ppdp_derive_keys(hapd->conf->ssid.wpa_psk->psk, sta_nonce, ap_nonce, authkey, enckey);
 
-	if (ppdp_encrypt_ssid(enckey, (u8 *)hapd->conf->ssid.rssid, erssid) != 0) {
+	if (ppdp_encrypt_ssid(enckey, (u8 *)rssid, erssid) != 0) {
 		return pos;
 	}
 
@@ -166,7 +224,6 @@ u8 * ppdp_eid_probe_resp(struct hostapd_data *hapd,
 
 	// DEBUG
 	ppdp_dump(hapd->conf->ssid.wpa_psk->psk, sta_nonce, ap_nonce, erssid, msgauth, authkey, enckey);
-	printf("r-ssid: %s\n", hapd->conf->ssid.rssid);
 	{
 		u8 buf[256] = {0,};
 		ppdp_decrypt_ssid(enckey, erssid, buf);

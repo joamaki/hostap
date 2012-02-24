@@ -11,14 +11,17 @@
 #ifndef __PPDP_H
 #define __PPDP_H
 
-#include "common/ppdp_common.h"
+struct sta_info;
+struct hostapd_data;
+struct ieee80211_mgmt;
 
-void ppdp_generate_rssid(char *rssid_out);
+char* ppdp_get_rssid(const u8 *sta);
 
 Boolean ppdp_is_probe_req(const u8 *start,
 			  size_t len);
 
 u8 * ppdp_eid_probe_resp(struct hostapd_data *hapd,
+			 struct sta_info *sta,
 			 const struct ieee80211_mgmt *mgmt,
 			 size_t len,
 			 u8 *pos, u8 *epos);

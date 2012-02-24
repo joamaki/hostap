@@ -62,10 +62,12 @@ struct hostapd_ssid {
 	size_t ssid_len;
 	int ssid_set;
 
+/*
 #ifdef CONFIG_TML_PPDP
         char rssid[PPDP_RSSID_LEN + 1];
         int rssid_set;
 #endif
+*/
 
 	char vlan[IFNAMSIZ + 1];
 	secpolicy security_policy;

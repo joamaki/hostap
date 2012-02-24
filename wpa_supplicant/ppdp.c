@@ -157,7 +157,7 @@ static void ppdp_process_bss(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	size_t expected = PPDP_OUI_LEN + 2*PPDP_NONCE_LEN + PPDP_RSSID_LEN + PPDP_MSGAUTH_LEN;
  
 	if (len != expected) {
- 		wpa_printf(MSG_DEBUG, "PPDP: Invalid message (length %lu, expected %lu)",
+ 		wpa_printf(MSG_DEBUG, "PPDP: Invalid message (length %u, expected %u)",
 			len, expected);
  		return;
  	}

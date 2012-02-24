@@ -36,6 +36,10 @@
 #include "ap_drv_ops.h"
 #include "sta_info.h"
 
+#ifdef CONFIG_TML_PPDP
+#include "ppdp.h"
+#endif
+
 static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
 				       struct sta_info *sta);
 static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx);
@@ -229,6 +233,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	os_free(sta->ht_capabilities);
 	os_free(sta->psk);
+
+#ifdef CONFIG_TML_PPDP
+	os_free(sta->rssid);
+#endif
 
 	os_free(sta);
 }
@@ -464,6 +472,11 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	ap_sta_hash_add(hapd, sta);
 	sta->ssid = &hapd->conf->ssid;
 	ap_sta_remove_in_other_bss(hapd, sta);
+
+#ifdef CONFIG_TML_PPDP
+	sta->rssid = os_zalloc(PPDP_RSSID_LEN);
+	os_memcpy(sta->rssid, ppdp_get_rssid(addr), PPDP_RSSID_LEN);
+#endif
 
 	return sta;
 }
